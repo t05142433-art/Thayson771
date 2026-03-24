@@ -60,7 +60,7 @@ setInterval(() => {
 // CONFIGURAÇÕES DO THAYSON (SINCRONIZADAS COM PYTHON)
 // ==========================================
 const CREDENCIAIS_PAINEL = {
-    username: "thaysonsilvacavalcante555@gmail.com", // Usuário atualizado
+    username: "thaysonsilvacavalcante@gmail.com", // E-mail corrigido conforme Python
     password: "Thayson13.@",
     baseUrl: "https://seventvpainel.top/api",
     dnsPrincipal: "http://cdnflash.top"
@@ -95,13 +95,11 @@ function saveDB(data) { fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
 
 let PANEL_TOKEN = "";
 
-// HEADERS EXATOS PARA EVITAR BLOQUEIO
+// HEADERS IGUAIS AO PYTHON PARA EVITAR CLOUDFLARE
 const HEADERS_API = {
     "Accept": "application/json",
     "Content-Type": "application/json",
-    "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Mobile Safari/537.36",
-    "Origin": "https://seventvpainel.top",
-    "Referer": "https://seventvpainel.top/",
+    "User-Agent": "Mozilla/5.0 (Linux; Android 10)",
     "Locale": "pt"
 };
 
@@ -222,15 +220,15 @@ async function startBot() {
 
             const msgAnim = await sock.sendMessage(from, { text: "⏳ *ɪɴɪᴄɪᴀɴᴅᴏ ɢᴇʀᴀᴄᴀᴏ...*" });
             
-            // GARANTE O TOKEN ANTES DE GERAR
             if (!PANEL_TOKEN) await realizarLogin();
 
             try {
+                // PAYLOAD SINCRONIZADO COM O SUCESSO DO PYTHON
                 const res = await axios.post(`${CREDENCIAIS_PAINEL.baseUrl}/customers`, {
                     server_id: "BV4D3rLaqZ",
                     package_id: "z2BDvoWrkj",
                     connection_type: "IPTV",
-                    is_trial: "YES", // Alterado para YES para ser teste real
+                    is_trial: "NO", 
                     connections: 1
                 }, { 
                     headers: { 
@@ -310,5 +308,4 @@ async function startBot() {
     });
 }
 
-// Inicia com o login dinâmico
 realizarLogin().then(() => startBot());
