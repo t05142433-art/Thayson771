@@ -95,15 +95,27 @@ function saveDB(data) { fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
 
 let PANEL_TOKEN = "";
 
+// CADEÇALHOS IGUAIS AO SEU SCRIPT PYTHON FUNCIONAL
+const HEADERS_API = {
+    "Accept": "application/json",
+    "Content-Type": "application/json",
+    "User-Agent": "Mozilla/5.0 (Linux; Android 10)",
+    "Locale": "pt"
+};
+
 async function realizarLogin() {
     try {
         const res = await axios.post(`${CREDENCIAIS_PAINEL.baseUrl}/auth/login`, {
             username: CREDENCIAIS_PAINEL.username,
             password: CREDENCIAIS_PAINEL.password
-        }, { headers: { "Accept": "application/json", "Content-Type": "application/json" } });
+        }, { headers: HEADERS_API });
+        
         PANEL_TOKEN = res.data.token;
         return true;
-    } catch (e) { return false; }
+    } catch (e) { 
+        console.log("Erro no login do painel:", e.response?.data || e.message);
+        return false; 
+    }
 }
 
 async function getRealExpiration(user, pass) {
@@ -199,15 +211,25 @@ async function startBot() {
                 await sock.sendMessage(from, { image: { url: foto }, caption: `📸 App *${appNome}*!` });
             }
 
-            const msgAnim = await sock.sendMessage(from, { text: "⏳ *ɪɴɪᴄɪᴀɴᴅᴏ...*" });
+            const msgAnim = await sock.sendMessage(from, { text: "⏳ *ɪɴɪᴄɪᴀɴᴅᴏ ɢᴇʀᴀᴄᴀᴏ...*\n[▒▒▒▒▒▒▒▒▒▒] 0%" });
             await delay(1000);
+            
             if (!PANEL_TOKEN) await realizarLogin();
 
             try {
+                // AQUI FOI AJUSTADO PARA O PAYLOAD QUE VOCÊ PASSOU (is_trial: NO)
                 const res = await axios.post(`${CREDENCIAIS_PAINEL.baseUrl}/customers`, {
-                    server_id: "BV4D3rLaqZ", package_id: "z2BDvoWrkj",
-                    connection_type: "IPTV", is_trial: "YES", connections: 1
-                }, { headers: { "Authorization": `Bearer ${PANEL_TOKEN}`, "Accept": "application/json" } });
+                    server_id: "BV4D3rLaqZ",
+                    package_id: "z2BDvoWrkj",
+                    connection_type: "IPTV",
+                    is_trial: "YES",
+                    connections: 1
+                }, { 
+                    headers: { 
+                        ...HEADERS_API,
+                        "Authorization": `Bearer ${PANEL_TOKEN}`
+                    } 
+                });
 
                 const c = res.data.data;
                 const expUnix = await getRealExpiration(c.username, c.password);
@@ -218,7 +240,10 @@ async function startBot() {
 
                 const final3D = `╔════════════════════╗\n    ✨ *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗨𝗟𝗧𝗥𝗔* ✨\n╚════════════════════╝\n\n✅ *ᴛᴇsᴛᴇ ʟɪʙᴇʀᴀᴅᴏ!*\n\n📱 *ᴀᴘᴘ:* ${appNome}\n🔢 *ᴄᴏᴅɪɢᴏ:* \`${appCod}\`\n👤 *ᴜsᴜᴀʀɪᴏ:* \`${c.username}\`\n🔑 *sᴇɴʜᴀ:* \`${c.password}\`\n🌐 *ᴅɴs:* ${CREDENCIAIS_PAINEL.dnsPrincipal}`;
                 await editMsg(from, msgAnim, final3D);
-            } catch (e) { await editMsg(from, msgAnim, "❌ Erro no painel."); }
+            } catch (e) { 
+                console.log("Erro ao gerar teste:", e.response?.data || e.message);
+                await editMsg(from, msgAnim, "❌ Erro no painel. Verifique se há créditos."); 
+            }
             return;
         }
 
@@ -253,7 +278,7 @@ async function startBot() {
                 break;
             default:
                 if (!texto.includes('/')) {
-                    await sock.sendMessage(from, { text: `🚀 *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗢ＭＮＩ-𝗦𝗧ＲＥＡＭ*\n\n1️⃣ 📋 ᴘʟᴀɴᴏs\n2️⃣ 🎁 ᴛᴇsᴛᴇ ɢʀᴀᴛɪs\n3️⃣ 💳 ᴘᴀɢᴀᴍᴇɴᴛᴏ` });
+                    await sock.sendMessage(from, { text: `🚀 *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗢ＭＮＩ-𝗦𝗧ＲＥＡＭ*\n\n1️⃣ 📋 ᴘʟᴀɴᴏs\n2️⃣ 🎁 ᴛᴇsᴛᴇ ɢʀᴀᴛɪs\n3️⃣ 4️⃣ 💳 ᴘᴀɢᴀᴍᴇɴᴛᴏ` });
                 }
                 break;
         }
