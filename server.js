@@ -60,7 +60,7 @@ setInterval(() => {
 // CONFIGURAÇÕES DO THAYSON
 // ==========================================
 const CREDENCIAIS_PAINEL = {
-    username: "thaysonsilvacavalcante@gmail.com",
+    username: "thaysonsilvacavalcante555@gmail.com",
     password: "Thayson13.@",
     baseUrl: "https://seventvpainel.top/api",
     dnsPrincipal: "http://cdnflash.top"
@@ -217,12 +217,12 @@ async function startBot() {
             if (!PANEL_TOKEN) await realizarLogin();
 
             try {
-                // AQUI FOI AJUSTADO PARA O PAYLOAD QUE VOCÊ PASSOU (is_trial: NO)
+                // CORREÇÃO AQUI: Payload exato para o SevenTV
                 const res = await axios.post(`${CREDENCIAIS_PAINEL.baseUrl}/customers`, {
                     server_id: "BV4D3rLaqZ",
                     package_id: "z2BDvoWrkj",
                     connection_type: "IPTV",
-                    is_trial: "YES",
+                    is_trial: "YES", // Voltado para YES para ser teste real de 6h
                     connections: 1
                 }, { 
                     headers: { 
@@ -232,13 +232,23 @@ async function startBot() {
                 });
 
                 const c = res.data.data;
+                const clienteId = c.id;
+
+                // BUSCA O TEMPLATE DA PLAYLIST (DNS, Links, etc)
+                const resPlaylist = await axios.get(`${CREDENCIAIS_PAINEL.baseUrl}/customers/${clienteId}/playlist`, {
+                    headers: { ...HEADERS_API, "Authorization": `Bearer ${PANEL_TOKEN}` }
+                });
+
+                const templatePt = resPlaylist.data.find(t => t.key === 'pt')?.template || "Acesso criado!";
+                
                 const expUnix = await getRealExpiration(c.username, c.password);
                 let db = loadDB();
                 db.testes_ativos[c.username] = { whatsapp: from, expUnix: expUnix || (Math.floor(Date.now() / 1000) + 21600), linkCheckout: c.checkout_url || null, avisoEnviado: false };
                 db.usuarios[from.replace(/[^0-9]/g, "")] = true;
                 saveDB(db);
 
-                const final3D = `╔════════════════════╗\n    ✨ *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗨𝗟𝗧𝗥𝗔* ✨\n╚════════════════════╝\n\n✅ *ᴛᴇsᴛᴇ ʟɪʙᴇʀᴀᴅᴏ!*\n\n📱 *ᴀᴘᴘ:* ${appNome}\n🔢 *ᴄᴏᴅɪɢᴏ:* \`${appCod}\`\n👤 *ᴜsᴜᴀʀɪᴏ:* \`${c.username}\`\n🔑 *sᴇɴʜᴀ:* \`${c.password}\`\n🌐 *ᴅɴs:* ${CREDENCIAIS_PAINEL.dnsPrincipal}`;
+                // MENSAGEM FINAL COMBINADA: Estilo 3D + Dados do Painel
+                const final3D = `╔════════════════════╗\n    ✨ *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗨𝗟𝗧𝗥𝗔* ✨\n╚════════════════════╝\n\n${templatePt}`;
                 await editMsg(from, msgAnim, final3D);
             } catch (e) { 
                 console.log("Erro ao gerar teste:", e.response?.data || e.message);
@@ -278,7 +288,7 @@ async function startBot() {
                 break;
             default:
                 if (!texto.includes('/')) {
-                    await sock.sendMessage(from, { text: `🚀 *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗢ＭＮＩ-𝗦𝗧ＲＥＡＭ*\n\n1️⃣ 📋 ᴘʟᴀɴᴏs\n2️⃣ 🎁 ᴛᴇsᴛᴇ ɢʀᴀᴛɪs\n3️⃣ 4️⃣ 💳 ᴘᴀɢᴀᴍᴇɴᴛᴏ` });
+                    await sock.sendMessage(from, { text: `🚀 *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗢ＭＮＩ-𝗦𝗧Ｒ𝗘𝗔Ｍ*\n\n1️⃣ 📋 ᴘʟᴀɴᴏs\n2️⃣ 🎁 ᴛᴇsᴛᴇ ɢʀᴀᴛɪs\n3️⃣ 💳 ᴘᴀɢᴀᴍᴇɴᴛᴏ` });
                 }
                 break;
         }
