@@ -9,6 +9,15 @@ const pino = require("pino");
 const axios = require("axios");
 const { DateTime } = require("luxon");
 const fs = require("fs");
+const express = require("express");
+
+// ==========================================
+// CONFIGURAÇÃO DE PORTA PARA O RENDER
+// ==========================================
+const app = express();
+const port = process.env.PORT || 3000;
+app.get('/', (req, res) => res.send('BOT IPTV ONLINE 🚀'));
+app.listen(port, () => console.log(`Monitor de porta ativo na porta ${port}`));
 
 // ==========================================
 // CONFIGURAÇÕES DO THAYSON
@@ -42,7 +51,6 @@ function loadDB() {
             return initialDB;
         }
         const data = JSON.parse(fs.readFileSync(DB_PATH));
-        // Garante que as chaves existam mesmo se o arquivo JSON estiver incompleto
         if (!data.testes_ativos) data.testes_ativos = {};
         if (!data.usuarios) data.usuarios = {};
         return data;
@@ -120,13 +128,11 @@ async function startBot() {
         }
     });
 
-    // --- MONITOR DE EXPIRAÇÃO ---
     setInterval(async () => {
         const agoraUnix = Math.floor(Date.now() / 1000);
         let db = loadDB();
         let mudou = false;
 
-        // O erro ocorria aqui porque db.testes_ativos vinha como undefined
         for (const [key, data] of Object.entries(db.testes_ativos)) {
             if (!data.expUnix) continue;
             const diff = data.expUnix - agoraUnix;
@@ -264,7 +270,7 @@ async function startBot() {
 
                 estadoUsuario[from] = 'ESCOLHENDO_APP';
                 const menuApps = `╔════════════════════╗\n` +
-                                 `    ⭐ *𝗘𝗦𝗖𝗢𝗟𝗛𝗔 𝗦𝗘𝗨 𝗔𝗣𝗣* ⭐\n` +
+                                 `    ⭐ *𝗘𝗦𝗖𝗢𝗟𝗛𝗔 𝗦𝗘𝗨 ᴀᴘᴘ* ⭐\n` +
                                  `╚════════════════════╝\n\n` +
                                  `1️⃣ ʙʀᴀsɪʟ ɪᴘᴛᴠ\n` +
                                  `2️⃣ ғʟᴇxᴘʟᴀʏ\n` +
@@ -281,7 +287,7 @@ async function startBot() {
             default:
                 if (!texto.includes('/')) {
                     const menu3D = `╔════════════════════╗\n` +
-                                   `   🚀 *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗢𝗠𝗡𝗜-𝗦𝗧𝗥𝗘𝗔𝗠* \n` +
+                                   `   🚀 *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗢𝗠𝗡Ｉ-𝗦𝗧𝗥ＥＡＭ* \n` +
                                    `╚════════════════════╝\n\n` +
                                    `👋 ᴏʟᴀ, *${nome.toUpperCase()}*!\n\n` +
                                    `1️⃣ 📋 *ᴘʟᴀɴᴏs ᴇ ᴠᴀʟᴏʀᴇs*\n` +
