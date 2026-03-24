@@ -60,7 +60,7 @@ setInterval(() => {
 // CONFIGURAÇÕES DO THAYSON (SINCRONIZADAS COM PYTHON)
 // ==========================================
 const CREDENCIAIS_PAINEL = {
-    username: "thaysonsilvacavalcante555@gmail.com", // Atualizado conforme bot.py
+    username: "thaysonsilvacavalcante555@gmail.com", // Usuário atualizado
     password: "Thayson13.@",
     baseUrl: "https://seventvpainel.top/api",
     dnsPrincipal: "http://cdnflash.top"
@@ -95,25 +95,30 @@ function saveDB(data) { fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
 
 let PANEL_TOKEN = "";
 
-// HEADERS EXATOS DO PYTHON
+// HEADERS EXATOS PARA EVITAR BLOQUEIO
 const HEADERS_API = {
     "Accept": "application/json",
     "Content-Type": "application/json",
-    "User-Agent": "Mozilla/5.0 (Linux; Android 10)",
+    "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Mobile Safari/537.36",
+    "Origin": "https://seventvpainel.top",
+    "Referer": "https://seventvpainel.top/",
     "Locale": "pt"
 };
 
 async function realizarLogin() {
     try {
-        console.log("🔐 Fazendo login no painel...");
+        console.log("🔐 Capturando novo Token de acesso...");
         const res = await axios.post(`${CREDENCIAIS_PAINEL.baseUrl}/auth/login`, {
             username: CREDENCIAIS_PAINEL.username,
             password: CREDENCIAIS_PAINEL.password
         }, { headers: HEADERS_API });
         
-        PANEL_TOKEN = res.data.token;
-        console.log("✅ Login realizado com sucesso!");
-        return true;
+        if (res.data.token) {
+            PANEL_TOKEN = res.data.token;
+            console.log("✅ Token capturado com sucesso!");
+            return true;
+        }
+        return false;
     } catch (e) { 
         console.log("Erro no login do painel:", e.response?.data || e.message);
         return false; 
@@ -140,7 +145,7 @@ async function startBot() {
         logger: pino({ level: 'silent' }),
         auth: state,
         printQRInTerminal: false,
-        browser: ["Ubuntu", "Chrome", "20.0.04"]
+        browser: ["SevenTV", "Chrome", "20.0.04"]
     });
 
     const editMsg = async (jid, msgOriginal, novoTexto) => {
@@ -217,15 +222,15 @@ async function startBot() {
 
             const msgAnim = await sock.sendMessage(from, { text: "⏳ *ɪɴɪᴄɪᴀɴᴅᴏ ɢᴇʀᴀᴄᴀᴏ...*" });
             
+            // GARANTE O TOKEN ANTES DE GERAR
             if (!PANEL_TOKEN) await realizarLogin();
 
             try {
-                // PAYLOAD SINCRONIZADO COM bot.py
                 const res = await axios.post(`${CREDENCIAIS_PAINEL.baseUrl}/customers`, {
                     server_id: "BV4D3rLaqZ",
                     package_id: "z2BDvoWrkj",
                     connection_type: "IPTV",
-                    is_trial: "NO", // Segue o bot.py que usa "NO" para pacotes específicos
+                    is_trial: "YES", // Alterado para YES para ser teste real
                     connections: 1
                 }, { 
                     headers: { 
@@ -235,13 +240,10 @@ async function startBot() {
                 });
 
                 const c = res.data.data;
-
-                // Captura os dados exatamente como no Python
                 const user = c.username;
                 const password = c.password;
                 const expira = c.expires_at_tz;
 
-                // Busca playlist para template completo
                 const resPlaylist = await axios.get(`${CREDENCIAIS_PAINEL.baseUrl}/customers/${c.id}/playlist`, {
                     headers: { ...HEADERS_API, "Authorization": `Bearer ${PANEL_TOKEN}` }
                 });
@@ -263,8 +265,9 @@ async function startBot() {
                 const final3D = `╔════════════════════╗\n    ✨ *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗨𝗟𝗧𝗥𝗔* ✨\n╚════════════════════╝\n\n✅ *TESTE GERADO!*\n\n${templatePt}`;
                 await editMsg(from, msgAnim, final3D);
             } catch (e) { 
-                console.log("Erro ao gerar teste:", e.response?.data || e.message);
-                await editMsg(from, msgAnim, "❌ Erro no painel. Verifique os créditos."); 
+                console.log("Erro ao gerar teste, renovando token...");
+                await realizarLogin();
+                await editMsg(from, msgAnim, "❌ Painel ocupado. Tente novamente agora."); 
             }
             return;
         }
@@ -307,4 +310,5 @@ async function startBot() {
     });
 }
 
+// Inicia com o login dinâmico
 realizarLogin().then(() => startBot());
