@@ -57,10 +57,10 @@ setInterval(() => {
 }, 300000); // 5 minutos
 
 // ==========================================
-// CONFIGURAÇÕES DO THAYSON
+// CONFIGURAÇÕES DO THAYSON (SINCRONIZADAS COM PYTHON)
 // ==========================================
 const CREDENCIAIS_PAINEL = {
-    username: "thaysonsilvacavalcante555@gmail.com",
+    username: "thaysonsilvacavalcante555@gmail.com", // Atualizado conforme bot.py
     password: "Thayson13.@",
     baseUrl: "https://seventvpainel.top/api",
     dnsPrincipal: "http://cdnflash.top"
@@ -95,7 +95,7 @@ function saveDB(data) { fs.writeFileSync(DB_PATH, JSON.stringify(data, null, 2))
 
 let PANEL_TOKEN = "";
 
-// CADEÇALHOS IGUAIS AO SEU SCRIPT PYTHON FUNCIONAL
+// HEADERS EXATOS DO PYTHON
 const HEADERS_API = {
     "Accept": "application/json",
     "Content-Type": "application/json",
@@ -105,12 +105,14 @@ const HEADERS_API = {
 
 async function realizarLogin() {
     try {
+        console.log("🔐 Fazendo login no painel...");
         const res = await axios.post(`${CREDENCIAIS_PAINEL.baseUrl}/auth/login`, {
             username: CREDENCIAIS_PAINEL.username,
             password: CREDENCIAIS_PAINEL.password
         }, { headers: HEADERS_API });
         
         PANEL_TOKEN = res.data.token;
+        console.log("✅ Login realizado com sucesso!");
         return true;
     } catch (e) { 
         console.log("Erro no login do painel:", e.response?.data || e.message);
@@ -122,7 +124,10 @@ async function getRealExpiration(user, pass) {
     try {
         const url = `${CREDENCIAIS_PAINEL.dnsPrincipal}/player_api.php?username=${user}&password=${pass}`;
         const res = await axios.get(url);
-        return res.data?.user_info?.exp_date || null;
+        if (res.data?.user_info?.exp_date) {
+            return parseInt(res.data.user_info.exp_date);
+        }
+        return null;
     } catch (e) { return null; }
 }
 
@@ -197,13 +202,12 @@ async function startBot() {
         if (!msg.message || msg.key.fromMe) return;
         const from = msg.key.remoteJid;
         const texto = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
-        const nome = msg.pushName || "Cliente";
 
         if (estadoUsuario[from] === 'ESCOLHENDO_APP') {
-            let appNome = ""; let appCod = ""; let foto = "";
-            if (texto === "1") { appNome = "Brasil IPTV"; appCod = "3234"; foto = "./brasil.jpg"; }
-            else if (texto === "2") { appNome = "FlexPlay"; appCod = "3234"; foto = "./flex.jpg"; }
-            else if (texto === "3") { appNome = "Assist+"; appCod = "00732"; foto = "./assist.jpg"; }
+            let appNome = ""; let foto = "";
+            if (texto === "1") { appNome = "Brasil IPTV"; foto = "./brasil.jpg"; }
+            else if (texto === "2") { appNome = "FlexPlay"; foto = "./flex.jpg"; }
+            else if (texto === "3") { appNome = "Assist+"; foto = "./assist.jpg"; }
             else { return await sock.sendMessage(from, { text: "❌ Opção inválida!" }); }
 
             delete estadoUsuario[from];
@@ -211,18 +215,17 @@ async function startBot() {
                 await sock.sendMessage(from, { image: { url: foto }, caption: `📸 App *${appNome}*!` });
             }
 
-            const msgAnim = await sock.sendMessage(from, { text: "⏳ *ɪɴɪᴄɪᴀɴᴅᴏ ɢᴇʀᴀᴄᴀᴏ...*\n[▒▒▒▒▒▒▒▒▒▒] 0%" });
-            await delay(1000);
+            const msgAnim = await sock.sendMessage(from, { text: "⏳ *ɪɴɪᴄɪᴀɴᴅᴏ ɢᴇʀᴀᴄᴀᴏ...*" });
             
             if (!PANEL_TOKEN) await realizarLogin();
 
             try {
-                // CORREÇÃO AQUI: Payload exato para o SevenTV
+                // PAYLOAD SINCRONIZADO COM bot.py
                 const res = await axios.post(`${CREDENCIAIS_PAINEL.baseUrl}/customers`, {
                     server_id: "BV4D3rLaqZ",
                     package_id: "z2BDvoWrkj",
                     connection_type: "IPTV",
-                    is_trial: "YES", // Voltado para YES para ser teste real de 6h
+                    is_trial: "NO", // Segue o bot.py que usa "NO" para pacotes específicos
                     connections: 1
                 }, { 
                     headers: { 
@@ -232,27 +235,36 @@ async function startBot() {
                 });
 
                 const c = res.data.data;
-                const clienteId = c.id;
 
-                // BUSCA O TEMPLATE DA PLAYLIST (DNS, Links, etc)
-                const resPlaylist = await axios.get(`${CREDENCIAIS_PAINEL.baseUrl}/customers/${clienteId}/playlist`, {
+                // Captura os dados exatamente como no Python
+                const user = c.username;
+                const password = c.password;
+                const expira = c.expires_at_tz;
+
+                // Busca playlist para template completo
+                const resPlaylist = await axios.get(`${CREDENCIAIS_PAINEL.baseUrl}/customers/${c.id}/playlist`, {
                     headers: { ...HEADERS_API, "Authorization": `Bearer ${PANEL_TOKEN}` }
                 });
 
-                const templatePt = resPlaylist.data.find(t => t.key === 'pt')?.template || "Acesso criado!";
+                const templatePt = resPlaylist.data.find(t => t.key === 'pt')?.template || 
+                                  `👤 Usuário: ${user}\n🔑 Senha: ${password}\n⏰ Expira em: ${expira}`;
                 
-                const expUnix = await getRealExpiration(c.username, c.password);
+                const expUnix = await getRealExpiration(user, password);
                 let db = loadDB();
-                db.testes_ativos[c.username] = { whatsapp: from, expUnix: expUnix || (Math.floor(Date.now() / 1000) + 21600), linkCheckout: c.checkout_url || null, avisoEnviado: false };
+                db.testes_ativos[user] = { 
+                    whatsapp: from, 
+                    expUnix: expUnix || (Math.floor(Date.now() / 1000) + 21600), 
+                    linkCheckout: c.checkout_url || null, 
+                    avisoEnviado: false 
+                };
                 db.usuarios[from.replace(/[^0-9]/g, "")] = true;
                 saveDB(db);
 
-                // MENSAGEM FINAL COMBINADA: Estilo 3D + Dados do Painel
-                const final3D = `╔════════════════════╗\n    ✨ *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗨𝗟𝗧𝗥𝗔* ✨\n╚════════════════════╝\n\n${templatePt}`;
+                const final3D = `╔════════════════════╗\n    ✨ *𝗦𝗘𝗩𝗘𝗡𝗧𝗩 𝗨𝗟𝗧𝗥𝗔* ✨\n╚════════════════════╝\n\n✅ *TESTE GERADO!*\n\n${templatePt}`;
                 await editMsg(from, msgAnim, final3D);
             } catch (e) { 
                 console.log("Erro ao gerar teste:", e.response?.data || e.message);
-                await editMsg(from, msgAnim, "❌ Erro no painel. Verifique se há créditos."); 
+                await editMsg(from, msgAnim, "❌ Erro no painel. Verifique os créditos."); 
             }
             return;
         }
@@ -278,7 +290,7 @@ async function startBot() {
             case "2":
                 const userNum = from.replace(/[^0-9]/g, "");
                 let db = loadDB();
-                if (db.usuarios[userNum]) return await sock.sendMessage(from, { text: "❌ Já usou seu teste hoje!" });
+                if (db.usuarios[userNum]) return await sock.sendMessage(from, { text: "❌ Você já usou seu teste hoje!" });
                 estadoUsuario[from] = 'ESCOLHENDO_APP';
                 await sock.sendMessage(from, { text: `1️⃣ ʙʀᴀsɪʟ ɪᴘᴛᴠ\n2️⃣ ғʟᴇxᴘʟᴀʏ\n3️⃣ ᴀssɪsᴛ+` });
                 break;
